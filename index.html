@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>每日天使卡 · 今日的訊息</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Noto+Serif+TC:wght@400;600&family=Noto+Sans+TC:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void: #0a0d24;
+    --void-2: #141a3f;
+    --void-3: #1d2450;
+    --gold: #d4af6a;
+    --gold-soft: #ecd9a8;
+    --lavender: #a99bd6;
+    --lavender-soft: #d6cdef;
+    --copper: #d68f6d;
+    --copper-soft: #efc7b3;
+    --starlight: #f4f0e6;
+    --starlight-dim: rgba(244,240,230,0.6);
+    --ink: #05061a;
+    --card-back-1: #241a42;
+    --card-back-2: #372655;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: radial-gradient(ellipse at 50% -10%, var(--void-3) 0%, var(--void-2) 45%, var(--void) 100%);
+    color: var(--starlight);
+    font-family:'Noto Sans TC', sans-serif;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  #stars{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+  }
+  #stars span{
+    position:absolute; border-radius:50%;
+    background: var(--starlight);
+    animation: twinkle 4s ease-in-out infinite;
+  }
+  @keyframes twinkle{
+    0%,100%{opacity:.15;}
+    50%{opacity:.9;}
+  }
+
+  .stage{
+    position:relative; z-index:1;
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center;
+    padding: 6vh 5vw 8vh;
+  }
+
+  header{
+    text-align:center;
+    margin-bottom: 2.2rem;
+  }
+  .today-date{
+    font-size:.8rem;
+    letter-spacing:.12em;
+    color: var(--gold-soft);
+    opacity:.9;
+    margin-bottom: 1rem;
+    font-weight:400;
+  }
+  .eyebrow{
+    font-size:.72rem;
+    letter-spacing:.42em;
+    text-transform:uppercase;
+    color: var(--gold-soft);
+    opacity:.85;
+    margin-bottom:.6rem;
+  }
+  h1{
+    font-family:'Cormorant Garamond', serif;
+    font-weight:600;
+    font-style:italic;
+    font-size: clamp(2.1rem, 5vw, 3.2rem);
+    margin:0 0 .5rem;
+    letter-spacing:.02em;
+    background: linear-gradient(180deg, var(--starlight) 0%, var(--gold-soft) 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .sub{
+    font-size:.92rem;
+    color: var(--starlight-dim);
+    font-weight:300;
+    max-width: 30em;
+    margin: 0 auto;
+    line-height:1.8;
+  }
+
+  /* ---------- Screen switching ---------- */
+  .screen{
+    width:100%;
+    display:flex; flex-direction:column; align-items:center;
+    transition: opacity .5s ease;
+  }
+  .screen.hidden{
+    display:none;
+  }
+  .fade-out{ opacity:0; }
+
+  /* ---------- Deck / fan of cards ---------- */
+  .deck-wrap{
+    position:relative;
+    width:100%;
+    max-width: 900px;
+    height: 320px;
+    margin-top: 1.5rem;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .deck-hint{
+    margin-top: 2.6rem;
+    font-size:.82rem;
+    color: var(--starlight-dim);
+    letter-spacing:.06em;
+  }
+
+  .card{
+    position:absolute;
+    width: 92px;
+    height: 148px;
+    left:50%; bottom:0;
+    border-radius: 10px;
+    cursor:pointer;
+    transform-origin: bottom center;
+    transition: transform .35s cubic-bezier(.2,.8,.3,1), filter .35s ease, box-shadow .35s ease;
+    background:
+      radial-gradient(circle at 50% 32%, rgba(212,175,106,0.18), transparent 60%),
+      linear-gradient(160deg, var(--card-back-2) 0%, var(--card-back-1) 100%);
+    border: 1px solid rgba(212,175,106,0.35);
+    box-shadow: 0 8px 18px rgba(0,0,0,.45);
+  }
+  .card::before{
+    content:"";
+    position:absolute; inset:7px;
+    border:1px solid rgba(212,175,106,0.3);
+    border-radius:6px;
+  }
+  .card .sigil{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .card .sigil svg{ width:38px; height:38px; opacity:.75; }
+
+  .card:hover{
+    filter: brightness(1.18);
+    box-shadow: 0 12px 26px rgba(212,175,106,.28);
+  }
+  .card.picked-fade{
+    opacity:0;
+    transform: translate(-50%, 40px) scale(.85) !important;
+    transition: opacity .4s ease, transform .4s ease;
+    pointer-events:none;
+  }
+  .card.chosen-fly{
+    z-index:20;
+    transition: transform .55s cubic-bezier(.22,.75,.25,1);
+  }
+
+  .shuffle .card{
+    animation: shuffleWiggle .55s ease;
+  }
+  @keyframes shuffleWiggle{
+    0%{ transform: translate(-50%,0) rotate(0deg) scale(1); }
+    30%{ transform: translate(-50%,-6px) rotate(var(--wig,2deg)) scale(1.02); }
+    60%{ transform: translate(-50%,2px) rotate(calc(var(--wig,2deg) * -1)) scale(.99); }
+    100%{ transform: translate(-50%,0) rotate(0deg) scale(1); }
+  }
+
+  /* ---------- Reveal screen ---------- */
+  .reveal{
+    display:flex; flex-direction:column; align-items:center;
+    padding-top: 1rem;
+  }
+  .mandala-wrap{
+    position:relative;
+    width: 210px; height:210px;
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom: -30px;
+  }
+  .mandala-wrap svg{
+    width:100%; height:100%;
+    animation: spin 60s linear infinite;
+  }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .flip-scene{
+    perspective: 1400px;
+    width: 220px; height: 356px;
+  }
+  .flip-card{
+    position:relative;
+    width:100%; height:100%;
+    transform-style: preserve-3d;
+    transform: rotateY(180deg);
+    transition: transform .9s cubic-bezier(.4,.2,.2,1);
+  }
+  .flip-card.flipped{ transform: rotateY(0deg); }
+  .face{
+    position:absolute; inset:0;
+    backface-visibility: hidden;
+    border-radius:14px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    border:1px solid rgba(212,175,106,.4);
+  }
+  .face.back{
+    transform: rotateY(180deg);
+    background: linear-gradient(160deg, var(--card-back-2) 0%, var(--card-back-1) 100%);
+  }
+  .face.back::before{
+    content:"";
+    position:absolute; inset:10px;
+    border:1px solid rgba(212,175,106,0.3);
+    border-radius:10px;
+  }
+  .face.front{
+    background: linear-gradient(165deg, #16193a 0%, #0c0e26 100%);
+    box-shadow: 0 20px 50px rgba(0,0,0,.55);
+    padding: 1.6rem 1.3rem;
+    text-align:center;
+  }
+  .face.front .keyword{
+    font-size:.68rem;
+    letter-spacing:.32em;
+    text-transform:uppercase;
+    margin-bottom:.5rem;
+  }
+  .face.front .name{
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-weight:600;
+    font-size:1.55rem;
+    line-height:1.25;
+    margin-bottom:.2rem;
+  }
+
+  .accent-0{ color: var(--gold-soft); }
+  .accent-1{ color: var(--lavender-soft); }
+  .accent-2{ color: var(--copper-soft); }
+
+  .reading{
+    max-width: 480px;
+    text-align:center;
+    margin-top: 2.1rem;
+    padding: 0 1rem;
+  }
+  .reading h2{
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-weight:600;
+    font-size:1.9rem;
+    margin: 0 0 .3rem;
+  }
+  .reading .kw-line{
+    font-size:.74rem;
+    letter-spacing:.3em;
+    text-transform:uppercase;
+    margin-bottom:1.3rem;
+    opacity:.8;
+  }
+  .reading .meaning{
+    font-size:1rem;
+    line-height:2;
+    color: var(--starlight-dim);
+    margin-bottom: 1.4rem;
+  }
+  .reading .action{
+    font-size:.94rem;
+    line-height:1.9;
+    padding: 1rem 1.3rem;
+    border-radius: 12px;
+    background: rgba(212,175,106,0.07);
+    border: 1px solid rgba(212,175,106,0.25);
+  }
+  .reading .action b{
+    display:block;
+    font-size:.68rem;
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    margin-bottom:.5rem;
+    color: var(--gold-soft);
+    font-weight:600;
+  }
+
+  .redraw-btn{
+    margin-top: 2.4rem;
+    background: transparent;
+    color: var(--starlight);
+    border: 1px solid rgba(244,240,230,0.35);
+    padding: .85rem 2.1rem;
+    border-radius: 999px;
+    font-family:'Noto Sans TC', sans-serif;
+    font-size: .88rem;
+    letter-spacing: .08em;
+    cursor:pointer;
+    transition: background .3s ease, border-color .3s ease, transform .2s ease;
+  }
+  .redraw-btn:hover{
+    background: rgba(212,175,106,0.12);
+    border-color: var(--gold);
+    transform: translateY(-1px);
+  }
+  .redraw-btn:active{ transform: translateY(0); }
+  .redraw-btn:focus-visible{
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
+  }
+  .card:focus-visible{
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
+  }
+
+  footer{
+    margin-top: 3rem;
+    font-size:.72rem;
+    color: rgba(244,240,230,0.35);
+    text-align:center;
+    line-height:1.8;
+    max-width: 26em;
+  }
+
+  /* ---------- 歷史紀錄（頁面底部） ---------- */
+  .history-section{
+    width: 100%;
+    max-width: 520px;
+    margin-top: 4.5rem;
+    padding-top: 2.4rem;
+    border-top: 1px solid rgba(212,175,106,0.18);
+  }
+  .history-head{
+    text-align:center;
+    margin-bottom: 1.4rem;
+  }
+  .history-head h3{
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-weight:600;
+    font-size: 1.6rem;
+    margin: 0 0 .35rem;
+    color: var(--gold-soft);
+  }
+  .history-head p{
+    font-size:.78rem;
+    color: var(--starlight-dim);
+    margin:0;
+    letter-spacing:.03em;
+  }
+
+  .history-list{
+    padding: 0 .2rem;
+  }
+  .history-empty{
+    text-align:center;
+    color: var(--starlight-dim);
+    font-size:.88rem;
+    line-height:1.9;
+    padding: 2rem 1rem;
+    border: 1px dashed rgba(212,175,106,0.22);
+    border-radius: 14px;
+  }
+
+  .history-item{
+    width:100%;
+    display:flex; align-items:center; gap:.85rem;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(212,175,106,0.14);
+    border-radius: 12px;
+    padding: .75rem .9rem;
+    margin-bottom: .55rem;
+    cursor:pointer;
+    text-align:left;
+    color: var(--starlight);
+    font-family: inherit;
+    transition: background .25s ease, border-color .25s ease;
+  }
+  .history-item:hover{
+    background: rgba(212,175,106,0.08);
+    border-color: rgba(212,175,106,0.35);
+  }
+  .history-item:focus-visible{
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+  .history-item .h-icon{
+    width:40px; height:40px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    background: rgba(0,0,0,0.25);
+    border-radius:50%;
+  }
+  .history-item .h-icon svg{ width:26px; height:26px; }
+  .history-item .h-text{ flex:1; min-width:0; }
+  .history-item .h-date{
+    font-size:.68rem;
+    letter-spacing:.1em;
+    color: var(--starlight-dim);
+    margin-bottom:.2rem;
+  }
+  .history-item .h-name{
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-weight:600;
+    font-size:1.08rem;
+  }
+  .history-item .h-kw{
+    font-size:.72rem;
+    margin-top:.15rem;
+    opacity:.85;
+  }
+  .history-item .h-chevron{
+    font-size:.9rem;
+    color: var(--starlight-dim);
+    transform: rotate(0deg);
+    transition: transform .25s ease;
+  }
+  .history-item.expanded .h-chevron{ transform: rotate(90deg); }
+
+  .history-detail{
+    max-height:0;
+    overflow:hidden;
+    transition: max-height .35s ease;
+  }
+  .history-detail-inner{
+    padding: .2rem .3rem .9rem 3.3rem;
+    font-size:.85rem;
+    line-height:1.85;
+    color: var(--starlight-dim);
+  }
+  .history-detail-inner .h-action{
+    margin-top:.6rem;
+    color: var(--gold-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: .001s !important; transition-duration: .2s !important; }
+  }
+
+  @media (max-width: 560px){
+    .deck-wrap{ height: 260px; }
+    .card{ width:66px; height:106px; }
+    .flip-scene{ width:180px; height:290px; }
+    .mandala-wrap{ width:170px; height:170px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="stars"></div>
+
+<div class="stage">
+  <header>
+    <div class="today-date" id="todayDate"></div>
+    <div class="eyebrow">每日天使卡</div>
+    <h1>今天，宇宙想告訴你的事</h1>
+    <p class="sub" id="subtext">靜下心，深呼吸三次，當你準備好了，從下方牌陣中憑直覺抽出一張。</p>
+  </header>
+
+  <!-- 抽卡畫面 -->
+  <section class="screen" id="deckScreen">
+    <div class="deck-wrap" id="deckWrap"></div>
+    <div class="deck-hint">點擊任一張卡，抽出屬於今天的訊息</div>
+  </section>
+
+  <!-- 結果畫面 -->
+  <section class="screen hidden reveal" id="revealScreen">
+    <div class="mandala-wrap" id="mandalaWrap"></div>
+    <div class="flip-scene">
+      <div class="flip-card" id="flipCard">
+        <div class="face back"></div>
+        <div class="face front" id="frontFace"></div>
+      </div>
+    </div>
+
+    <div class="reading">
+      <div class="kw-line accent-line" id="kwLine"></div>
+      <h2 id="cardName"></h2>
+      <p class="meaning" id="cardMeaning"></p>
+      <div class="action">
+        <b>今日建議</b>
+        <span id="cardAction"></span>
+      </div>
+    </div>
+
+    <button class="redraw-btn" id="redrawBtn">重新抽卡 ✦</button>
+  </section>
+
+  <!-- 歷史紀錄（頁面底部） -->
+  <section class="history-section">
+    <div class="history-head">
+      <h3>每日紀錄</h3>
+      <p>你曾經抽過的每一天訊息，都留在這裡。</p>
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </section>
+
+  <footer>本內容僅供每日自我反思與娛樂參考，並非專業心理諮商或醫療建議。</footer>
+</div>
+
+<script>
+/* ---------------- 星空背景 ---------------- */
+(function initStars(){
+  const wrap = document.getElementById('stars');
+  const n = 90;
+  for(let i=0;i<n;i++){
+    const s = document.createElement('span');
+    const size = Math.random()*2 + 0.6;
+    s.style.width = size+'px';
+    s.style.height = size+'px';
+    s.style.left = Math.random()*100+'%';
+    s.style.top = Math.random()*100+'%';
+    s.style.animationDelay = (Math.random()*4)+'s';
+    s.style.animationDuration = (3+Math.random()*3)+'s';
+    wrap.appendChild(s);
+  }
+})();
+
+/* ---------------- 卡片資料庫 ---------------- */
+const CARDS = [
+  {name:'大天使麥可', keyword:'保護 · 勇氣', accent:0, meaning:'此刻你被強大的保護能量包圍。放下不必要的恐懼與焦慮，你比自己想像的更安全，也更有力量。', action:'今天勇敢說出一句你一直不敢說的真心話。'},
+  {name:'大天使拉斐爾', keyword:'療癒 · 修復', accent:2, meaning:'無論是身體、情緒或關係上的疲憊，療癒正在悄悄發生。給自己多一點溫柔與休息的空間。', action:'今天為自己安排十分鐘什麼都不做的休息時間。'},
+  {name:'大天使加百列', keyword:'清晰 · 傳遞', accent:1, meaning:'你需要的答案其實已經很清楚，只是你還沒有真正相信自己的判斷。訊息已經在路上。', action:'把心裡打轉的想法寫下來，你會發現答案早就出現了。'},
+  {name:'大天使烏列', keyword:'智慧 · 洞見', accent:0, meaning:'停下腳步，用更宏觀的角度看待眼前的難題，你會發現原本卡住的地方其實有解方。', action:'花五分鐘安靜思考，而不是急著找人討論。'},
+  {name:'大天使阿列爾', keyword:'顯化 · 豐盛', accent:2, meaning:'你所付出的努力正在累積成果，豐盛的能量正在靠近，只是還需要一點耐心等待顯化。', action:'寫下三件你正在感謝的事，讓豐盛感先從心裡開始。'},
+  {name:'大天使夏彌爾', keyword:'平靜 · 無條件的愛', accent:1, meaning:'你值得被溫柔對待，包括被自己溫柔對待。今天適合放下評判，單純地愛與被愛。', action:'對著鏡子裡的自己說一句溫柔的話。'},
+  {name:'大天使漢尼爾', keyword:'直覺 · 優雅', accent:1, meaning:'你的直覺比邏輯更早知道答案。今天適合順著感覺行動，而不是強迫自己analyze一切。', action:'今天做一個決定時，先問問自己的直覺怎麼說。'},
+  {name:'大天使麥達昶', keyword:'專注 · 紀律', accent:0, meaning:'分心與拖延正在悄悄消耗你的能量。今天適合把注意力收回來，專心完成一件重要的事。', action:'選出今天最重要的一件事，先把它做完再說。'},
+  {name:'光之引導', keyword:'照亮前路', accent:0, meaning:'即使前方看起來模糊，光已經在你腳邊。你不需要看清全部的路，只需要看清下一步。', action:'只專注在今天能做的下一小步，其餘的先放下。'},
+  {name:'內在小孩', keyword:'純真 · 玩心', accent:2, meaning:'你已經很久沒有單純地玩耍與感到開心了。今天適合找回那個曾經無憂無慮的自己。', action:'做一件單純讓你開心、沒有目的性的小事。'},
+  {name:'釋放', keyword:'放下執著', accent:1, meaning:'有些事情、有些人、有些想法，已經到了可以放手的時刻。緊握著反而讓你更疲憊。', action:'寫下一件你想放下的事，然後把它撕掉或燒掉。'},
+  {name:'信任時機', keyword:'順流而行', accent:0, meaning:'不是所有事都需要用力推動，有些事情正在依照它自己的節奏發生，你只需要信任時機。', action:'今天遇到不順的事，練習說「也許這是更好的安排」。'},
+  {name:'新的開始', keyword:'重生 · 希望', accent:2, meaning:'一扇新的門正在打開。過去的結束不是失去，而是為了讓更好的東西有空間進來。', action:'為接下來的新開始，寫下一個小小的意圖。'},
+  {name:'感恩之心', keyword:'豐盛的起點', accent:2, meaning:'感恩是吸引更多美好的起點。你所擁有的，比你以為的還要多。', action:'向一個你感謝的人，親口或傳訊息說出你的感謝。'},
+  {name:'靜心聆聽', keyword:'內在聲音', accent:1, meaning:'外界的聲音太吵了，今天適合把音量調小，聽聽自己內心真正想要的是什麼。', action:'找五分鐘完全安靜，不滑手機、不聽音樂，只是坐著。'},
+  {name:'勇敢前行', keyword:'突破恐懼', accent:0, meaning:'恐懼一直在，但它不代表危險，只代表你正要跨出舒適圈。你比恐懼更強大。', action:'今天做一件讓你有點緊張、但一直想做的事。'},
+  {name:'愛的流動', keyword:'給予與接受', accent:1, meaning:'愛需要流動，不只是付出，也要學會接受。檢視一下你是否太習慣單方面給予。', action:'今天讓別人為你做一件小事，而不是自己全部扛下。'},
+  {name:'豐盛顯化', keyword:'吸引富足', accent:2, meaning:'匱乏感只是暫時的濾鏡，豐盛其實一直都在。轉換心態，機會會更容易被你看見。', action:'列出三個你已經擁有、值得珍惜的資源或優勢。'},
+  {name:'自我價值', keyword:'認可自己', accent:0, meaning:'你不需要透過別人的肯定才能證明自己的價值。你本身就已經足夠。', action:'今天大聲對自己說一次「我已經做得很好了」。'},
+  {name:'界線的力量', keyword:'溫柔而堅定', accent:1, meaning:'設立界線不是自私，而是自我尊重的表現。你可以善良，同時也可以說不。', action:'今天練習對一件不想做的事，溫柔但堅定地說不。'},
+  {name:'療癒過去', keyword:'與自己和解', accent:2, meaning:'過去的傷口值得被溫柔對待，而不是被否認或壓抑。允許自己慢慢和解。', action:'寫一封信給過去的自己，告訴他一切都會好起來。'},
+  {name:'直覺指引', keyword:'相信第一念', accent:1, meaning:'你腦海中閃過的第一個念頭，往往比反覆思考後的答案更貼近真相。', action:'今天有選擇困難時，相信自己的第一直覺。'},
+  {name:'耐心等待', keyword:'時機未到', accent:0, meaning:'不是每件事現在就該有結果。有些花需要更長的時間才會盛開，你的也是。', action:'今天允許自己「還沒有答案」，不急著逼自己做決定。'},
+  {name:'慶祝當下', keyword:'享受此刻', accent:2, meaning:'你一直在為未來努力，卻忘了停下來慶祝已經走到這裡的自己。今天值得被慶祝。', action:'用一個小小的儀式犒賞自己，例如一杯喜歡的飲料。'}
+];
+
+/* ---------------- 產生曼陀羅 SVG ---------------- */
+const ACCENT_HEX = ['#d4af6a', '#a99bd6', '#d68f6d'];
+
+function mandalaSVG(seedIndex, accentIdx, size){
+  const color = ACCENT_HEX[accentIdx];
+  const rays = 8 + (seedIndex % 5) * 2; // 8..16
+  const innerR = size*0.14;
+  const outerR = size*0.46;
+  let lines = '';
+  for(let i=0;i<rays;i++){
+    const angle = (Math.PI*2/rays)*i;
+    const x1 = size/2 + Math.cos(angle)*innerR;
+    const y1 = size/2 + Math.sin(angle)*innerR;
+    const x2 = size/2 + Math.cos(angle)*outerR;
+    const y2 = size/2 + Math.sin(angle)*outerR;
+    lines += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="1" opacity="0.55"/>`;
+    const midR = (innerR+outerR)/2 + (seedIndex%3)*4;
+    const mx = size/2 + Math.cos(angle)*midR;
+    const my = size/2 + Math.sin(angle)*midR;
+    lines += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="2.2" fill="${color}" opacity="0.75"/>`;
+  }
+  return `
+  <svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="${size/2}" cy="${size/2}" r="${outerR}" fill="none" stroke="${color}" stroke-width="0.75" opacity="0.35"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${innerR}" fill="none" stroke="${color}" stroke-width="1" opacity="0.6"/>
+    ${lines}
+    <circle cx="${size/2}" cy="${size/2}" r="${innerR*0.35}" fill="${color}" opacity="0.85"/>
+  </svg>`;
+}
+
+/* ---------------- 牌陣渲染 ---------------- */
+const deckWrap = document.getElementById('deckWrap');
+const deckScreen = document.getElementById('deckScreen');
+const revealScreen = document.getElementById('revealScreen');
+const subtext = document.getElementById('subtext');
+
+let order = [];
+
+function shuffledIndices(n){
+  const arr = Array.from({length:n}, (_,i)=>i);
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function renderDeck(){
+  deckWrap.innerHTML = '';
+  order = shuffledIndices(CARDS.length);
+  const total = order.length;
+  const spreadAngle = 64; // 扇形總角度
+  const startAngle = -spreadAngle/2;
+
+  order.forEach((cardIdx, pos)=>{
+    const t = total === 1 ? 0.5 : pos/(total-1);
+    const angle = startAngle + spreadAngle*t; // deg
+    const rad = angle * Math.PI/180;
+    const arcRadius = 300;
+    const xOffset = Math.sin(rad)*arcRadius*0.42;
+    const yLift = (1-Math.cos(rad))*90;
+
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.tabIndex = 0;
+    el.style.setProperty('--wig', (angle*0.4)+'deg');
+    el.style.transform = `translate(calc(-50% + ${xOffset}px), ${-yLift}px) rotate(${angle*0.6}deg)`;
+    el.style.zIndex = 100 + pos;
+
+    const card = CARDS[cardIdx];
+    el.innerHTML = `<div class="sigil">${mandalaSVG(cardIdx, card.accent, 60)}</div>`;
+
+    el.addEventListener('click', ()=> pickCard(cardIdx, el));
+    el.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); pickCard(cardIdx, el); }
+    });
+
+    deckWrap.appendChild(el);
+  });
+}
+
+function pickCard(cardIdx, chosenEl){
+  const allCards = deckWrap.querySelectorAll('.card');
+  allCards.forEach(c=>{
+    if(c !== chosenEl){
+      c.classList.add('picked-fade');
+    } else {
+      c.style.zIndex = 999;
+      c.classList.add('chosen-fly');
+      c.style.transform = 'translate(-50%, -40px) scale(1.05)';
+    }
+  });
+
+  setTimeout(()=>{
+    showReveal(cardIdx);
+  }, 480);
+}
+
+/* ---------------- 歷史紀錄（localStorage） ---------------- */
+const HISTORY_KEY = 'dailyAngelCardHistory';
+
+function todayKey(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDateLabel(dateKey){
+  const [y,m,d] = dateKey.split('-').map(Number);
+  const dateObj = new Date(y, m-1, d);
+  const weekdays = ['日','一','二','三','四','五','六'];
+  return `${y}年${String(m).padStart(2,'0')}月${String(d).padStart(2,'0')}日（週${weekdays[dateObj.getDay()]}）`;
+}
+
+function loadHistory(){
+  try{
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){
+    console.warn('讀取歷史紀錄失敗', e);
+    return [];
+  }
+}
+
+function saveHistory(list){
+  try{
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+  }catch(e){
+    console.warn('儲存歷史紀錄失敗', e);
+  }
+}
+
+function recordDraw(cardIdx){
+  const list = loadHistory();
+  const key = todayKey();
+  const existingIdx = list.findIndex(item => item.date === key);
+  const entry = { date: key, cardIdx, timestamp: Date.now() };
+  if(existingIdx > -1){
+    list[existingIdx] = entry;
+  } else {
+    list.push(entry);
+  }
+  saveHistory(list);
+  renderHistoryList();
+}
+
+function renderHistoryList(){
+  const list = loadHistory().slice().sort((a,b)=> b.date.localeCompare(a.date));
+  historyList.innerHTML = '';
+
+  if(list.length === 0){
+    historyList.innerHTML = `<div class="history-empty">尚未有抽卡紀錄。<br>抽出今天的第一張卡，開始累積屬於你的每日訊息吧。</div>`;
+    return;
+  }
+
+  list.forEach(entry=>{
+    const card = CARDS[entry.cardIdx];
+    if(!card) return;
+    const accentClass = 'accent-' + card.accent;
+
+    const wrap = document.createElement('div');
+
+    const item = document.createElement('button');
+    item.className = 'history-item';
+    item.innerHTML = `
+      <div class="h-icon">${mandalaSVG(entry.cardIdx, card.accent, 30)}</div>
+      <div class="h-text">
+        <div class="h-date">${formatDateLabel(entry.date)}</div>
+        <div class="h-name">${card.name}</div>
+        <div class="h-kw ${accentClass}">${card.keyword}</div>
+      </div>
+      <div class="h-chevron">›</div>
+    `;
+
+    const detail = document.createElement('div');
+    detail.className = 'history-detail';
+    detail.innerHTML = `
+      <div class="history-detail-inner">
+        <div>${card.meaning}</div>
+        <div class="h-action">今日建議：${card.action}</div>
+      </div>
+    `;
+
+    item.addEventListener('click', ()=>{
+      const isOpen = item.classList.contains('expanded');
+      historyList.querySelectorAll('.history-item.expanded').forEach(other=>{
+        if(other !== item){
+          other.classList.remove('expanded');
+          other.nextElementSibling.style.maxHeight = null;
+        }
+      });
+      if(isOpen){
+        item.classList.remove('expanded');
+        detail.style.maxHeight = null;
+      } else {
+        item.classList.add('expanded');
+        detail.style.maxHeight = detail.scrollHeight + 'px';
+      }
+    });
+
+    wrap.appendChild(item);
+    wrap.appendChild(detail);
+    historyList.appendChild(wrap);
+  });
+}
+
+const historyList = document.getElementById('historyList');
+
+/* ---------------- 結果畫面 ---------------- */
+const flipCard = document.getElementById('flipCard');
+const frontFace = document.getElementById('frontFace');
+const mandalaWrap = document.getElementById('mandalaWrap');
+const kwLine = document.getElementById('kwLine');
+const cardName = document.getElementById('cardName');
+const cardMeaning = document.getElementById('cardMeaning');
+const cardAction = document.getElementById('cardAction');
+
+function showReveal(cardIdx){
+  const card = CARDS[cardIdx];
+  const accentClass = 'accent-' + card.accent;
+
+  recordDraw(cardIdx);
+
+  flipCard.classList.remove('flipped');
+
+  frontFace.innerHTML = `
+    <div class="keyword ${accentClass}">${card.keyword}</div>
+    <div class="name">${card.name}</div>
+    <div style="margin-top:14px;">${mandalaSVG(cardIdx, card.accent, 64)}</div>
+  `;
+  mandalaWrap.innerHTML = mandalaSVG(cardIdx, card.accent, 210);
+
+  kwLine.textContent = card.keyword;
+  kwLine.className = 'kw-line ' + accentClass;
+  cardName.textContent = card.name;
+  cardMeaning.textContent = card.meaning;
+  cardAction.textContent = card.action;
+
+  deckScreen.classList.add('hidden');
+  revealScreen.classList.remove('hidden');
+  subtext.textContent = '這是今天屬於你的訊息。慢慢閱讀，感受它與你此刻心境的連結。';
+
+  requestAnimationFrame(()=>{
+    setTimeout(()=> flipCard.classList.add('flipped'), 60);
+  });
+}
+
+/* ---------------- 重新抽卡：回到原始牌陣畫面 ---------------- */
+document.getElementById('redrawBtn').addEventListener('click', ()=>{
+  revealScreen.classList.add('hidden');
+  deckScreen.classList.remove('hidden');
+  subtext.textContent = '靜下心，深呼吸三次，當你準備好了，從下方牌陣中憑直覺抽出一張。';
+  renderDeck();
+});
+
+/* ---------------- 初始化 ---------------- */
+document.getElementById('todayDate').textContent = formatDateLabel(todayKey());
+renderDeck();
+renderHistoryList();
+</script>
+</body>
+</html>
